@@ -17,7 +17,7 @@
 
 **Hermes** es una aplicación de escritorio nativa y multiplataforma diseñada para la toma de notas de alto rendimiento, la captura de ideas por voz y la organización de flujos de trabajo asistidos por IA. 
 
-Desarrollada bajo un enfoque **local-first**, la app combina un editor por bloques tipo Notion con la velocidad y ligereza de un ejecutable nativo construido en Rust mediante **Tauri v2**.
+Desarrollada bajo un enfoque **local-first**, la app combina un editor por bloques con la velocidad y ligereza de un ejecutable nativo construido en Rust mediante **Tauri v2**.
 
 ---
 
