@@ -47,18 +47,99 @@ El proyecto utiliza una arquitectura híbrida optimizada para rendimiento en pro
 
 ---
 
-## 🚀 Instalación y Configuración Local
+## ⚙️ Guía de Instalación y Configuración (Setup Paso a Paso)
 
-### Requisitos Previos
+Sigue estos pasos en orden para configurar las dependencias del sistema, clonar el repositorio, agregar las claves de API y poner en marcha la aplicación.
 
-* **Node.js:** v18.x o superior
-* **npm:** v9.x o superior
-* **Rust Toolchain:** Instalado mediante [rustup](https://rustup.rs/)
-* **Build Tools (Windows):** Visual Studio Community con la carga de trabajo *"Desarrollo para el escritorio con C++"*
+### Paso 1: Instalación de Requisitos Previos y Herramientas del Sistema
 
-### Pasos para Ejecutar en Desarrollo
+Asegúrate de contar con el entorno de ejecución básico y los compiladores requeridos por Rust/Tauri según tu sistema operativo:
 
-1. **Clonar el repositorio:**
-   ```bash
-   git clone [https://github.com/Pasetti23/Hermes.git](https://github.com/Pasetti23/Hermes.git)
-   cd Hermes
+1. **Instalar Node.js:**
+   * Descarga e instala **Node.js (v18.x o superior)** desde [nodejs.org](https://nodejs.org/).
+2. **Instalar Rust:**
+   * Descarga e instala **Rust Toolchain** ejecutando el instalador interactivo de [rustup.rs](https://rustup.rs/).
+3. **Compiladores del sistema según el Sistema Operativo:**
+   * **Windows:** Descarga e instala [Visual Studio Community](https://visualstudio.microsoft.com/). Durante la instalación, marca la casilla **"Desarrollo para el escritorio con C++"**.
+   * **macOS:** Abre la terminal y ejecuta `xcode-select --install`.
+   * **Linux (Ubuntu/Debian):** Abre la terminal e instala las librerías nativas con el siguiente comando:
+     ```bash
+     sudo apt update
+     sudo apt install build-essential curl wget libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
+     ```
+
+---
+
+### Paso 2: Clonar el Repositorio
+
+Abre tu terminal o consola de comandos y descarga el código fuente del proyecto:
+
+```bash
+git clone [https://github.com/Pasetti23/Hermes.git](https://github.com/Pasetti23/Hermes.git)
+cd Hermes
+```
+
+### Paso 3: Configuración de Variables de Entorno y API Keys
+La aplicación utiliza la API de Google Gemini o Openai para alimentar sus funciones de inteligencia artificial y procesamiento de notas.
+
+En la raíz de la carpeta del proyecto, crea un archivo llamado `.env`:
+
+```bash
+cp .env.example .env
+```
+
+*(Si no existe `.env.example`, puedes crear directamente un archivo con el nombre `.env` en la raíz del proyecto).*
+
+Abre el archivo `.env` en tu editor de código y agrega la variable con tu clave de API:
+
+```env
+# API Key para las funciones de Inteligencia Artificial (Google Gemini)
+NEXT_PUBLIC_GEMINI_API_KEY=tu_api_key_aqui
+```
+
+💡 **¿Dónde obtener la API Key?:** Puedes generar una clave gratuita en [Google AI Studio](https://aistudio.google.com/).
+
+---
+
+### Paso 4: Instalación de Dependencias de Node.js
+Con la terminal ubicada en la carpeta raíz del proyecto, ejecuta:
+
+```bash
+npm install
+```
+
+---
+
+### Paso 5: Iniciar la Aplicación en Modo Desarrollo
+Para ejecutar Hermes localmente con soporte de recarga en vivo (*Hot-Reloading*):
+
+```bash
+npm run tauri:dev
+```
+
+Este comando iniciará el servidor web interno de Next.js en `http://localhost:3000` y desplegará automáticamente la ventana de la aplicación nativa de Hermes.
+
+---
+
+### 📦 Compilación y Generación del Ejecutable (.EXE)
+Si deseas empaquetar la aplicación y generar el instalador final optimizado para producción:
+
+```bash
+npm run tauri:build
+```
+
+Una vez finalizado el proceso de compilación, los archivos del instalador (`.msi` / `.exe` o binario ejecutable) se guardarán en la siguiente ruta:
+```text
+src-tauri/target/release/bundle/
+```
+
+
+
+
+
+
+
+
+
+
+
