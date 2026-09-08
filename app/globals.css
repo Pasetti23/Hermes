@@ -1,0 +1,238 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Importación correcta de la tipografía al principio del CSS o antes de tus selectores */
+@import url('https://cdnfonts.com');
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme("colors.ink.700") transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: theme("colors.ink.700");
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+html,
+body {
+  height: 100%;
+  background-color: theme("colors.canvas.DEFAULT");
+  color: theme("colors.ink.100");
+}
+
+/* Cambiamos la tipografía básica de la app por Roman SD */
+body {
+  font-family: 'Roman SD', serif !important;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+:focus-visible {
+  outline: 2px solid theme("colors.ai.DEFAULT");
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- Tiptap editor canvas ---- */
+
+.ai-editor-shell .ProseMirror {
+  outline: none;
+  min-height: 60vh;
+  caret-color: theme("colors.ai.soft");
+}
+
+.ai-editor-shell .ProseMirror p.is-editor-empty:first-child::before,
+.ai-editor-shell .ProseMirror p.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: theme("colors.ink.500");
+  pointer-events: none;
+}
+
+/* Aplicamos Roman SD también a tus encabezados principales */
+.ai-editor-shell .ProseMirror h1,
+.ai-editor-shell .ProseMirror h2,
+.ai-editor-shell .ProseMirror h3 {
+  font-family: 'Roman SD', serif;
+  text-transform: uppercase;
+}
+
+.ai-editor-shell .ProseMirror h1 {
+  font-size: 2.25rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin: 2rem 0 0.6rem;
+  color: theme("colors.ink.50");
+}
+
+.ai-editor-shell .ProseMirror h2 {
+  font-size: 1.6rem;
+  font-weight: 630;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  margin: 1.8rem 0 0.5rem;
+  color: theme("colors.ink.50");
+}
+
+.ai-editor-shell .ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 610;
+  line-height: 1.35;
+  margin: 1.4rem 0 0.4rem;
+  color: theme("colors.ink.50");
+}
+
+.ai-editor-shell .ProseMirror p {
+  margin: 0.45rem 0;
+  color: theme("colors.ink.100");
+}
+
+.ai-editor-shell .ProseMirror ul,
+.ai-editor-shell .ProseMirror ol {
+  padding-left: 1.4rem;
+  margin: 0.4rem 0;
+}
+
+.ai-editor-shell .ProseMirror li {
+  margin: 0.2rem 0;
+}
+
+.ai-editor-shell .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.2rem;
+}
+
+.ai-editor-shell .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.ai-editor-shell .ProseMirror ul[data-type="taskList"] li > label {
+  margin-top: 0.32rem;
+  user-select: none;
+}
+
+.ai-editor-shell .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  color: theme("colors.ink.500");
+  text-decoration: line-through;
+}
+
+.ai-editor-shell .ProseMirror input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid theme("colors.ink.600");
+  background: theme("colors.canvas.raised");
+  cursor: pointer;
+  position: relative;
+}
+
+.ai-editor-shell .ProseMirror input[type="checkbox"]:checked {
+  background: theme("colors.ai.DEFAULT");
+  border-color: theme("colors.ai.DEFAULT");
+}
+
+.ai-editor-shell .ProseMirror input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(40deg);
+}
+
+.ai-editor-shell .ProseMirror blockquote {
+  border-left: 3px solid theme("colors.ai.dim");
+  padding-left: 1rem;
+  margin: 0.7rem 0;
+  color: theme("colors.ink.300");
+  font-style: italic;
+}
+
+.ai-editor-shell .ProseMirror pre {
+  background: theme("colors.canvas.inset");
+  border: 1px solid theme("colors.ink.800");
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  margin: 0.7rem 0;
+}
+
+.ai-editor-shell .ProseMirror code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.85em;
+}
+
+.ai-editor-shell .ProseMirror pre code {
+  color: theme("colors.ink.100");
+}
+
+.ai-editor-shell .ProseMirror hr {
+  border: none;
+  border-top: 1px solid theme("colors.ink.800");
+  margin: 1.6rem 0;
+}
+
+.ai-editor-shell .ProseMirror ::selection {
+  background: theme("colors.ai.glow");
+}
+
+.ai-editor-shell .ProseMirror strong {
+  color: theme("colors.ink.50");
+  font-weight: 650;
+}
+
+.ai-region-active {
+  background: theme("colors.ai.glow");
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25);
+}
+
+.ai-shimmer {
+  background: linear-gradient(
+    90deg,
+    theme("colors.ink.800") 0px,
+    theme("colors.ink.700") 40px,
+    theme("colors.ink.800") 80px
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* Clase auxiliar por si la necesitás en componentes individuales */
+.marca-hermes {
+  font-family: 'Roman SD', serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+}
