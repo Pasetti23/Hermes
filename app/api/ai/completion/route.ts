@@ -56,10 +56,29 @@ function stripEdgeNewlines(value: string): string {
 }
 
 function describeProviderError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message || "El proveedor de IA devolvió un error sin detalle.";
+  if (error && typeof error === "object") {
+    const err = error as { message?: unknown; statusCode?: unknown; responseBody?: unknown };
+    const parts: string[] = [];
+
+    if (typeof err.message === "string" && err.message.trim().length > 0) {
+      parts.push(err.message.trim());
+    }
+    if (typeof err.statusCode === "number") {
+      parts.push(`(HTTP ${err.statusCode})`);
+    }
+    if (typeof err.responseBody === "string" && err.responseBody.trim().length > 0) {
+      parts.push(`— ${err.responseBody.trim().slice(0, 500)}`);
+    }
+
+    if (parts.length > 0) return parts.join(" ");
+
+    if (error instanceof Error) {
+      return error.message || "El proveedor de IA devolvió un error sin detalle.";
+    }
   }
+
   if (typeof error === "string") return error;
+
   try {
     return JSON.stringify(error);
   } catch {
@@ -167,7 +186,8 @@ export async function POST(req: Request): Promise<Response> {
       temperature,
       maxTokens: resolvedAction === "summarize_meeting" ? 4096 : 2048,
       onError: ({ error }) => {
-        console.error("[ai/completion] stream error", describeProviderError(error));
+        console.error("[ai/completion] stream error:", describeProviderError(error));
+        console.error("[ai/completion] raw error object:", error);
       },
     });
 
@@ -181,6 +201,7 @@ export async function POST(req: Request): Promise<Response> {
       },
     });
   } catch (err) {
+    console.error("[ai/completion] request failed before streaming started:", err);
     return jsonError({ error: "ai_provider_error", detail: describeProviderError(err) }, 502);
   }
 }
