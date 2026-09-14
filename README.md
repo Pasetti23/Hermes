@@ -1,145 +1,200 @@
-<div align="center">
+# Hermes — AI-native note editor
 
-# Hermes ⚡
+A block-based document editor (Next.js 14 + Tiptap 2) with AI embedded
+directly in the writing canvas: a slash menu, a selection bubble menu,
+`Cmd+J` free-form prompting, and a Notion-style Meeting Assistant with live
+speech-to-text and AI-generated structured notes.
 
-**Espacio de trabajo local-first e inteligente para notas, audio e ideas estructuradas.**
+## Stack
 
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![Tauri](https://img.shields.io/badge/Tauri-v2-blue?style=flat-square&logo=tauri)](https://tauri.app/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Rust](https://img.shields.io/badge/Rust-1.75+-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
-[![Licencia](https://img.shields.io/badge/Licencia-MIT-green.svg?style=flat-square)](LICENSE)
+- **Frontend**: Next.js 14 (App Router), TypeScript (strict), Tailwind CSS, Tiptap 2
+- **AI**: Vercel AI SDK v4 (`ai`, `@ai-sdk/openai`, `@ai-sdk/google`), streaming via `useCompletion`
+- **Persistence**: `localStorage`-backed multi-document workspace (pages + folders), see `lib/workspace/documents.ts`
 
-</div>
-
----
-
-## 📌 Sobre el Proyecto
-
-**Hermes** es una aplicación de escritorio nativa y multiplataforma diseñada para la toma de notas de alto rendimiento, la captura de ideas por voz y la organización de flujos de trabajo asistidos por IA.
-
-Desarrollada bajo un enfoque **local-first**, la app combina un editor por bloques con la velocidad, seguridad y ligereza de un ejecutable nativo construido en Rust mediante **Tauri v2**.
-
----
-
-## 🛠️ Tecnologías Utilizadas
-
-* **Frontend Framework:** Next.js 14 (App Router) & React 18
-* **Estilos & UI:** Tailwind CSS
-* **Motor del Editor:** Tiptap / ProseMirror
-* **Runtime de Escritorio:** Tauri v2 (Rust)
-* **Lenguajes:** TypeScript, Rust, Node.js
-
----
-
-## 🏗️ Arquitectura y Funcionamiento Interno
-
-El proyecto utiliza una arquitectura híbrida optimizada para rendimiento en producción y agilidad en desarrollo:
-
-### 1. Núcleo del Frontend (Next.js & Tiptap)
-* **Editor WYSIWYG por bloques:** Basado en Tiptap/ProseMirror, permite formatear texto enriquecido, listas, bloques de código e integración de componentes dinámicos.
-* **Modo Standalone:** Configurado mediante `NEXT_OUTPUT=standalone` en Next.js. Esto compila el servidor de Node.js y las páginas en una estructura ligera dentro de `.next/standalone`, eliminando la necesidad de empaquetar la carpeta `node_modules` completa.
-
-### 2. Capa Nativa y Pipeline de Build (Tauri v2 & Rust)
-* **Integración del Servidor:** En producción, el proceso en Rust (`src-tauri/src/main.rs`) inicia el servidor embebido de Next.js (`server.js`) y renderiza la interfaz mediante el motor WebView nativo del sistema operativo.
-* **Automatización de Assets:** El script `scripts/copy-standalone-to-tauri.mjs` copia el servidor compilado, los assets estáticos (`.next/static`) y los recursos públicos hacia `src-tauri/resources/standalone/` antes de empaquetar el ejecutable final (`.exe` / `.msi`).
-* **Hot-Reloading en Desarrollo:** Durante `npm run tauri:dev`, Tauri se conecta directamente al servidor de desarrollo de Next.js (`http://localhost:3000`) sin necesidad de recompilar los recursos nativos en cada cambio de interfaz.
-
----
-
-## ⚙️ Guía de Instalación y Configuración (Setup Paso a Paso)
-
-Sigue estos pasos en orden para configurar las dependencias del sistema, clonar el repositorio, agregar las claves de API y poner en marcha la aplicación.
-
-### Paso 1: Instalación de Requisitos Previos y Herramientas del Sistema
-
-Asegúrate de contar con el entorno de ejecución básico y los compiladores requeridos por Rust/Tauri según tu sistema operativo:
-
-1. **Instalar Node.js:**
-   * Descarga e instala **Node.js (v18.x o superior)** desde [nodejs.org](https://nodejs.org/).
-2. **Instalar Rust:**
-   * Descarga e instala **Rust Toolchain** ejecutando el instalador interactivo de [rustup.rs](https://rustup.rs/).
-3. **Compiladores del sistema según el Sistema Operativo:**
-   * **Windows:** Descarga e instala [Visual Studio Community](https://visualstudio.microsoft.com/). Durante la instalación, marca la casilla **"Desarrollo para el escritorio con C++"**.
-   * **macOS:** Abre la terminal y ejecuta `xcode-select --install`.
-   * **Linux (Ubuntu/Debian):** Abre la terminal e instala las librerías nativas con el siguiente comando:
-     ```bash
-     sudo apt update
-     sudo apt install build-essential curl wget libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
-     ```
-
----
-
-### Paso 2: Clonar el Repositorio
-
-Abre tu terminal o consola de comandos y descarga el código fuente del proyecto:
-
-```bash
-git clone [https://github.com/Pasetti23/Hermes.git](https://github.com/Pasetti23/Hermes.git)
-cd Hermes
-```
-
-### Paso 3: Configuración de Variables de Entorno y API Keys
-La aplicación utiliza la API de Google Gemini o Openai para alimentar sus funciones de inteligencia artificial y procesamiento de notas.
-
-En la raíz de la carpeta del proyecto, crea un archivo llamado `.env`:
-
-```bash
-cp .env.example .env
-```
-
-*(Si no existe `.env.example`, puedes crear directamente un archivo con el nombre `.env` en la raíz del proyecto).*
-
-Abre el archivo `.env` en tu editor de código y agrega la variable con tu clave de API:
-
-```env
-# API Key para las funciones de Inteligencia Artificial (Google Gemini)
-NEXT_PUBLIC_GEMINI_API_KEY=tu_api_key_aqui
-```
-
-💡 **¿Dónde obtener la API Key?:** Puedes generar una clave gratuita en [Google AI Studio](https://aistudio.google.com/).
-
----
-
-### Paso 4: Instalación de Dependencias de Node.js
-Con la terminal ubicada en la carpeta raíz del proyecto, ejecuta:
+## Getting started
 
 ```bash
 npm install
+cp .env.example .env.local   # add OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY
+npm run dev
 ```
 
----
+Open `http://localhost:3000`.
 
-### Paso 5: Iniciar la Aplicación en Modo Desarrollo
-Para ejecutar Hermes localmente con soporte de recarga en vivo (*Hot-Reloading*):
+## Project structure
+
+```
+app/
+  api/ai/completion/route.ts   # Edge streaming endpoint (OpenAI/Gemini)
+  layout.tsx, page.tsx         # Root layout + workspace shell
+components/
+  editor/                      # Editor, Sidebar, MeetingRecorder, AI menus
+  ui/                          # Small shared primitives (Button, Input, ...)
+lib/
+  ai/                          # System prompts, actions, meeting presets
+  tiptap/                      # Editor extensions + transaction helpers
+  workspace/                   # Multi-document CRUD over localStorage
+types/                         # Shared TypeScript types
+src-tauri/                     # Desktop shell (see below) — optional
+```
+
+Everything is imported via the `@/*` path alias (configured in
+`tsconfig.json`), so new components, Tiptap extensions, or integrations can
+be dropped into `lib/`, `components/`, or a new top-level folder without
+touching existing import paths.
+
+## Adding things later
+
+- **New Tiptap extension**: register it in `lib/tiptap/extensions.ts`; add any new transaction helpers to `lib/tiptap/helpers.ts`.
+- **New AI action**: add it to `AIActionKey` in `types/index.ts`, its instruction in `lib/ai/prompts.ts`, and wire a trigger in `AIBubbleMenu.tsx` / `AICommandMenu.tsx`.
+- **New AI provider**: add a `create...` client in `app/api/ai/completion/route.ts` next to the existing OpenAI/Google ones and extend `selectModel`.
+- **A real database instead of localStorage**: `lib/workspace/documents.ts` is the only module that knows about the storage mechanism — swap its internals for API calls to a backend without touching `Sidebar.tsx` or `Editor.tsx`.
+
+## Desktop build (Tauri)
 
 ```bash
-npm run tauri:dev
+npm run tauri:dev     # runs `next dev` and opens it in a native window
+npm run tauri:build   # builds Next in standalone mode, then bundles with Tauri
 ```
 
-Este comando iniciará el servidor web interno de Next.js en `http://localhost:3000` y desplegará automáticamente la ventana de la aplicación nativa de Hermes.
+**Read this before relying on `tauri:build`:** this repo has server-side API
+routes (Edge runtime, streaming, secret API keys) — it can't be shipped as a
+static export. `beforeBuildCommand` runs `next build` in standalone mode and
+then `scripts/copy-standalone-to-tauri.mjs`, which copies
+`.next/standalone/` plus the static assets Next deliberately leaves out of
+that output (`.next/static/`, `public/`) into `src-tauri/resources/standalone/`.
+`tauri.conf.json`'s `bundle.resources` maps that folder into the packaged
+app as `standalone`, and `src-tauri/src/main.rs` spawns
+`resources/standalone/server.js` with `node` as a child process — but only
+*after* polling `127.0.0.1:3000` until it actually accepts a connection.
+The main window is created programmatically in Rust at that point (it's
+**not** declared in `tauri.conf.json` — `"windows": []` — specifically so it
+can't be created before the server is confirmed ready). Any failure along
+the way (missing server file, Node not on PATH, server not responding in
+time) shows a native error dialog instead of failing silently. See the
+design-notes comment block at the top of `main.rs` for the full reasoning.
+This means the built desktop app currently **requires Node.js to be
+installed on the end user's machine** — it is not yet a fully
+self-contained native binary. Bundling a pinned Node runtime as a proper
+Tauri sidecar (`externalBin`) so end users need nothing preinstalled is the
+natural next step.
 
----
+### API keys in the packaged app
 
-### 📦 Compilación y Generación del Ejecutable (.EXE)
-Si deseas empaquetar la aplicación y generar el instalador final optimizado para producción:
+`.env.local` only exists on your own machine at build time — it never
+ships inside the packaged app, and the standalone `server.js` child
+process Rust spawns has no way to read it. For the desktop build, API keys
+instead come from a small `.env`-style file at:
+
+- Windows: `%APPDATA%\com.ai-notion-editor.hermes\.env`
+- macOS: `~/Library/Application Support/com.ai-notion-editor.hermes/.env`
+- Linux: `~/.config/com.ai-notion-editor.hermes/.env`
+
+`main.rs` creates this file (with a commented template) on first launch if
+it doesn't exist yet, reads whatever `KEY=VALUE` pairs are in it on every
+subsequent launch, and passes them into the spawned Node process's
+environment — so setting `GOOGLE_GENERATIVE_AI_API_KEY=...` (and
+`AI_PROVIDER=google`) there, then restarting the app, is what actually
+makes the AI features work in a built `.exe`/`.app`/`.AppImage`, the same
+way `.env.local` does for `next dev`/`next build`.
+
+`src-tauri/resources/standalone/` only has a `.gitkeep` placeholder in this
+repo (so `tauri dev` — which never runs the build step — always finds an
+existing, non-empty resource directory to validate against) and gets wiped
+and refilled by the copy script right before `tauri build` packages the
+app; only the placeholder is tracked in git, the generated contents are
+excluded.
+
+This scaffolding (`tauri.conf.json`, `Cargo.toml`, `main.rs`, the copy
+script) was written and reviewed carefully. Verification status, to be
+precise about what has and hasn't actually been checked:
+
+- **JS/TS side**: fully verified — `npm run typecheck`, `next build` (both
+  normal and `NEXT_OUTPUT=standalone`), and
+  `scripts/copy-standalone-to-tauri.mjs` were all actually run end-to-end,
+  confirming the server lands at exactly
+  `src-tauri/resources/standalone/server.js`, matching what `main.rs` looks up.
+- **Rust side**: `cargo check` could not be completed — Ubuntu's packaged
+  `rustc`/`cargo` (1.75) is too old for current Tauri's transitive
+  dependencies (`edition2024`), and this environment has no access to
+  `rustup`'s distribution servers to install a newer toolchain. A
+  crate-free `rustc` syntax pass on `main.rs` ran cleanly (zero syntax
+  errors — only the expected "unresolved import" errors for external
+  crates it couldn't see without Cargo). The Windows-only branch
+  (`#[cfg(target_os = "windows")]`, using `CommandExt::creation_flags` to
+  set `CREATE_NO_WINDOW`) is compiled out entirely on this Linux sandbox,
+  and cross-compiling to `x86_64-pc-windows-gnu` to check it anyway failed
+  because that target's `std` isn't installed here and installing it needs
+  `rustup` (same network restriction). That block's correctness rests on
+  `CommandExt`/`creation_flags`/`0x08000000` being well-established, stable
+  std APIs — not on having actually compiled it. `app_data_dir()`
+  (persistent uploads) and the `tauri-plugin-updater`/`tauri-plugin-process`
+  registrations are new in this same unverified-by-compilation category —
+  same reasoning, same caveat. Run `cargo check` from
+  `src-tauri/` on a real Windows machine (Rust 1.85+ recommended) before
+  shipping.
+- If Node still exits immediately after this fix, check
+  `hermes-node.log` next to the executable (Node's own stdout/stderr,
+  now captured instead of discarded) and `hermes-server.log` (this app's
+  own diagnostics, including the child's exit status if it died before the
+  port opened) — both are new as of this round of fixes.
+
+App icons (`src-tauri/icons/`) are already generated from `app-icon.png`;
+see `src-tauri/icons/README.md` if you ever need to regenerate them from a
+new logo.
+
+## Releases & auto-updates
+
+One-command release flow:
 
 ```bash
-npm run tauri:build
+npm run release:patch   # or release:minor / release:major
+npm run release:push
 ```
 
-Una vez finalizado el proceso de compilación, los archivos del instalador (`.msi` / `.exe` o binario ejecutable) se guardarán en la siguiente ruta:
-```text
-src-tauri/target/release/bundle/
+`npm version patch|minor|major` bumps `package.json`, runs
+`scripts/sync-version.mjs` (via the `"version"` npm lifecycle hook) to copy
+that same version into `src-tauri/tauri.conf.json` and
+`src-tauri/Cargo.toml`, stages both, then npm creates the commit and a
+`vX.Y.Z` git tag automatically. `release:push` just pushes the commit +
+tag, which triggers `.github/workflows/release.yml`
+(`tauri-apps/tauri-action`) to build the Windows installer and publish it
+as a **draft** GitHub Release — review and publish it manually.
+
+**One-time setup before the first release:**
+
+1. Generate an updater signing keypair: `npx tauri signer generate -w ~/.tauri/hermes.key`.
+2. Add the **private** key and its password as GitHub repo secrets: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (Settings → Secrets and variables → Actions).
+3. Put the printed **public** key into `src-tauri/tauri.conf.json`'s `plugins.updater.pubkey` (currently a placeholder).
+4. Update the `plugins.updater.endpoints` URL in the same file if this repo is ever renamed/moved.
+
+The app checks that `endpoints` URL for `latest.json` on launch
+(`components/editor/VersionStatus.tsx`, fixed bottom-left corner) —
+`@tauri-apps/plugin-updater` (not `electron-updater`, which can't run in a
+Tauri app at all) downloads with a live progress bar, then the button
+becomes "Reiniciar y actualizar", which calls `@tauri-apps/plugin-process`'s
+`relaunch()`. None of this runs when the app is served as a plain website —
+`VersionStatus` detects that via `"__TAURI_INTERNALS__" in window` and just
+shows the version (from `/api/version`, reading `package.json`) with no
+update-checking at all.
+
+### Where uploaded files actually live
+
+`lib/uploads/storage.ts` is the one place that decides this: if
+`HERMES_USER_DATA_DIR` is set (only true in the packaged desktop build —
+`main.rs` resolves it via `app_data_dir()`, the Tauri equivalent of
+Electron's `app.getPath('userData')`, and passes it to the spawned Node
+process), uploaded images go there and get served back through
+`app/api/uploads/images/[filename]/route.ts`. Otherwise (plain
+`next dev`/`next start`/Vercel) they go to `public/uploads/images/` and
+Next's static file serving handles them for free. This exists because the
+packaged app's own install directory (what `public/` resolves to once
+bundled) usually isn't writable without admin rights — the same class of
+bug the `.env` config file and log files hit earlier, fixed the same way.
+
+
+
+```bash
+npm run typecheck   # tsc --noEmit
+npm run build        # next build
 ```
-
-
-
-
-
-
-
-
-
-
-

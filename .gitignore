@@ -46,6 +46,10 @@ Thumbs.db
 # --- Vercel ---
 .vercel
 
+# --- User-uploaded content (never commit real uploads) ---
+public/uploads/images/*
+!public/uploads/images/.gitkeep
+
 # --- Tauri (native desktop build) ---
 src-tauri/target
 src-tauri/gen
