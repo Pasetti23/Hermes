@@ -15,7 +15,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Canvas — AI-native notes",
+  title: "Hermes",
   description: "A block-based document editor with AI embedded directly in the writing canvas.",
 };
 

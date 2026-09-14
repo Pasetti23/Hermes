@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TopBar from "@/components/editor/TopBar";
 import Sidebar from "@/components/editor/Sidebar";
 import Editor, { type EditorHandle } from "@/components/editor/Editor";
+import VersionStatus from "@/components/editor/VersionStatus";
 import { countWords } from "@/lib/utils";
 import {
   createDocument,
@@ -18,6 +19,12 @@ import {
 } from "@/lib/workspace/documents";
 import type { DocumentMeta, MeetingGenerationParams, WorkspaceDocument } from "@/types";
 
+const ZOOM_STORAGE_KEY = "notion_editor_zoom";
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 200;
+const ZOOM_STEP = 10;
+const ZOOM_DEFAULT = 100;
+
 export default function HomePage(): JSX.Element {
   const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
@@ -27,6 +34,7 @@ export default function HomePage(): JSX.Element {
   const [wordCount, setWordCount] = useState<number>(0);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isMeetingGenerating, setIsMeetingGenerating] = useState<boolean>(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(ZOOM_DEFAULT);
 
   const editorRef = useRef<EditorHandle | null>(null);
   const titleSaveTimeoutRef = useRef<number | null>(null);
@@ -50,7 +58,48 @@ export default function HomePage(): JSX.Element {
     setActiveDocId(resolvedId);
     if (resolvedId) setActiveDocumentId(resolvedId);
     setWorkspaceReady(true);
+
+    try {
+      const savedZoom = Number(window.localStorage.getItem(ZOOM_STORAGE_KEY));
+      if (!Number.isNaN(savedZoom) && savedZoom >= ZOOM_MIN && savedZoom <= ZOOM_MAX) {
+        setZoomLevel(savedZoom);
+      }
+    } catch {
+      // localStorage unavailable — just keep the default zoom
+    }
   }, []);
+
+  const adjustZoom = useCallback((delta: number) => {
+    setZoomLevel((prev) => {
+      const next = delta === 0 ? ZOOM_DEFAULT : Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, prev + delta));
+      try {
+        window.localStorage.setItem(ZOOM_STORAGE_KEY, String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  // Ctrl/Cmd +/-/0 zoom the editor content itself (like Word/a PDF viewer),
+  // instead of falling through to the browser's own native page zoom.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      if (event.key === "=" || event.key === "+") {
+        event.preventDefault();
+        adjustZoom(ZOOM_STEP);
+      } else if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        adjustZoom(-ZOOM_STEP);
+      } else if (event.key === "0") {
+        event.preventDefault();
+        adjustZoom(0);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [adjustZoom]);
 
   const activeDocument = useMemo(
     () => documents.find((d) => d.id === activeDocId) ?? null,
@@ -152,6 +201,54 @@ export default function HomePage(): JSX.Element {
     editorRef.current?.generateMeetingSummary(params);
   }, []);
 
+  const handleGetCursorPosition = useCallback((): number => {
+    return editorRef.current?.getCursorPosition() ?? 0;
+  }, []);
+
+  const handleInsertAtPosition = useCallback((pos: number, html: string) => {
+    editorRef.current?.insertContentAtPosition(pos, html);
+  }, []);
+
+  // Exporting to PDF just uses the browser's/WebView's native print dialog
+  // (window.print() → "Save as PDF") — real vector text, no extra
+  // dependency, works the same in the web app and inside the Tauri
+  // WebView. Printing the currently-active document is immediate; printing
+  // a *different* document from the Sidebar switches to it first and waits
+  // a couple of animation frames for that document's content to actually
+  // paint (the Editor remounts via `key={activeDocument.id}`) before
+  // triggering print — otherwise the print dialog could open against the
+  // still-mounting previous document.
+  const pendingPrintDocIdRef = useRef<string | null>(null);
+
+  const handleExportPdf = useCallback(
+    (id: string) => {
+      if (id === activeDocId) {
+        window.print();
+        return;
+      }
+      pendingPrintDocIdRef.current = id;
+      handleSelectDocument(id);
+    },
+    [activeDocId, handleSelectDocument]
+  );
+
+  useEffect(() => {
+    if (pendingPrintDocIdRef.current === null) return;
+    if (pendingPrintDocIdRef.current !== activeDocId) return;
+
+    const targetId = pendingPrintDocIdRef.current;
+    pendingPrintDocIdRef.current = null;
+
+    // Two rAFs: one for React to commit the new Editor instance, one more
+    // for the browser to actually paint its content before print() grabs
+    // a snapshot of the page.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (activeDocId === targetId) window.print();
+      });
+    });
+  }, [activeDocId]);
+
   useEffect(() => {
     return () => {
       if (titleSaveTimeoutRef.current !== null) {
@@ -161,15 +258,22 @@ export default function HomePage(): JSX.Element {
   }, []);
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden">
+    <main className="print-root flex h-screen flex-col overflow-hidden">
       <TopBar
         meta={documentMeta}
         isSaving={isSaving}
         isMeetingGenerating={isMeetingGenerating}
         onGenerateMeetingSummary={handleGenerateMeetingSummary}
         onToggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
+        getCursorPosition={handleGetCursorPosition}
+        onInsertAtPosition={handleInsertAtPosition}
+        onExportPdf={() => handleExportPdf(activeDocId ?? "")}
+        zoomLevel={zoomLevel}
+        onZoomIn={() => adjustZoom(ZOOM_STEP)}
+        onZoomOut={() => adjustZoom(-ZOOM_STEP)}
+        onZoomReset={() => adjustZoom(0)}
       />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="print-row flex flex-1 overflow-hidden">
         {!sidebarCollapsed && (
           <Sidebar
             documents={documents}
@@ -180,10 +284,11 @@ export default function HomePage(): JSX.Element {
             onRename={handleRenameDocument}
             onDelete={handleDeleteDocument}
             onMove={handleMoveDocument}
+            onExportPdf={handleExportPdf}
           />
         )}
         <div className="ai-editor-shell flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl px-6 pb-40 pt-10 sm:px-10">
+          <div className="mx-auto w-full max-w-3xl px-6 pb-40 pt-10 sm:px-10" style={{ zoom: `${zoomLevel}%` }}>
             {workspaceReady && activeDocument ? (
               <Editor
                 key={activeDocument.id}
@@ -200,6 +305,7 @@ export default function HomePage(): JSX.Element {
           </div>
         </div>
       </div>
+      <VersionStatus />
     </main>
   );
 }

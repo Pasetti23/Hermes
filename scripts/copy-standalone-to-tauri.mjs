@@ -6,7 +6,7 @@
 // `bundle.resources` maps into the packaged app. It's invoked by
 // `beforeBuildCommand` right after `next build`, so it only ever runs
 // as part of `tauri build` — never during `tauri dev`.
-import { cpSync, copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,7 +16,6 @@ const projectRoot = join(__dirname, "..");
 const standaloneSrc = join(projectRoot, ".next", "standalone");
 const staticSrc = join(projectRoot, ".next", "static");
 const publicSrc = join(projectRoot, "public");
-const envLocalSrc = join(projectRoot, ".env.local");
 
 const target = join(projectRoot, "src-tauri", "resources", "standalone");
 
@@ -52,14 +51,6 @@ if (existsSync(publicSrc)) {
   console.warn(`[copy-standalone-to-tauri] ${publicSrc} not found — skipping public assets.`);
 }
 
-// Copy .env.local into the target standalone folder as .env so Next.js standalone can load it at runtime
-if (existsSync(envLocalSrc)) {
-  copyFileSync(envLocalSrc, join(target, ".env"));
-  console.log(`[copy-standalone-to-tauri] Copied .env.local to ${join(target, ".env")}`);
-} else {
-  console.warn(`[copy-standalone-to-tauri] ${envLocalSrc} not found — environment variables might be missing.`);
-}
-
 // main.rs looks for the server at exactly
 // `resource_dir.join("standalone").join("server.js")`, and
 // `tauri.conf.json`'s `bundle.resources` maps this whole directory to
@@ -70,7 +61,7 @@ const serverEntry = join(target, "server.js");
 if (!existsSync(serverEntry)) {
   fail(
     `Expected the standalone server at ${serverEntry} after copying, but it's missing. ` +
-      'Check that next.config.mjs has output: "standalone" wired to NEXT_OUTPUT and that ' +
+      "Check that next.config.mjs has output: \"standalone\" wired to NEXT_OUTPUT and that " +
       "the build above actually succeeded."
   );
 }

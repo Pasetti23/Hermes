@@ -50,7 +50,7 @@ export default function AIPromptInput({ anchorRect, mode, onSubmit, onClose }: A
     <div
       ref={rootRef}
       style={style}
-      className="z-40 w-[26rem] max-w-[90vw] rounded-xl border border-ai/40 bg-ink-900 p-1.5 shadow-ai-glow animate-fade-in"
+      className="no-print z-40 w-[26rem] max-w-[90vw] rounded-xl border border-ai/40 bg-ink-900 p-1.5 shadow-ai-glow animate-fade-in"
     >
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
         <Sparkles className="ml-2 h-4 w-4 shrink-0 text-ai-soft" />

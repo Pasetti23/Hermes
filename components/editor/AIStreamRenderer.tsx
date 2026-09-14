@@ -68,7 +68,7 @@ export default function AIStreamRenderer({
   return (
     <div
       style={style}
-      className="z-50 flex max-h-[50vh] w-[28rem] max-w-[92vw] flex-col overflow-hidden rounded-xl border border-ai/40 bg-ink-900 shadow-ai-glow animate-fade-in"
+      className="no-print z-50 flex max-h-[50vh] w-[28rem] max-w-[92vw] flex-col overflow-hidden rounded-xl border border-ai/40 bg-ink-900 shadow-ai-glow animate-fade-in"
     >
       <div className="flex shrink-0 items-center justify-between border-b border-ink-800 px-3 py-2">
         <div className="flex items-center gap-2 text-xs font-medium text-ai-soft">

@@ -88,7 +88,7 @@ export default function AICommandMenu({ items, anchorRect, query, onSelect, onCl
 
   if (items.length === 0) {
     return (
-      <div style={style} className="z-40 w-64 rounded-lg border border-ink-700 bg-ink-900 p-3 text-xs text-ink-500 shadow-menu animate-fade-in">
+      <div style={style} className="no-print z-40 w-64 rounded-lg border border-ink-700 bg-ink-900 p-3 text-xs text-ink-500 shadow-menu animate-fade-in">
         No matches for &ldquo;{query}&rdquo;
       </div>
     );
@@ -100,7 +100,7 @@ export default function AICommandMenu({ items, anchorRect, query, onSelect, onCl
     <div
       ref={listRef}
       style={style}
-      className="z-40 max-h-80 w-72 overflow-y-auto rounded-lg border border-ink-700 bg-ink-900 p-1.5 shadow-menu animate-fade-in"
+      className="no-print z-40 max-h-80 w-72 overflow-y-auto rounded-lg border border-ink-700 bg-ink-900 p-1.5 shadow-menu animate-fade-in"
       role="listbox"
     >
       {aiItems.length > 0 && (

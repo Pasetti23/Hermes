@@ -1,0 +1,54 @@
+name: Release desktop build
+
+# Fires when `npm run release:push` (or a plain `git push --tags`) pushes a
+# tag like v1.2.3 — created automatically by `npm version patch|minor|major`
+# via the "version" script in package.json, which also syncs that same
+# version into src-tauri/tauri.conf.json and Cargo.toml before the tag is
+# cut. One command (`npm run release:patch && npm run release:push`) is
+# the entire release process end to end.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    # Windows only for now, matching what this project has actually been
+    # built and tested against. Tauri supports macOS/Linux the same way —
+    # add `macos-latest` / `ubuntu-latest` to this list (and, for Linux,
+    # an `apt-get install` step for webkit2gtk and friends) if you need
+    # those too; `tauri-action` handles the per-OS bundling either way.
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build and publish
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Required for the auto-updater: signs the release artifacts and
+          # produces the latest.json manifest that
+          # @tauri-apps/plugin-updater polls for. Generate the keypair once
+          # locally with `npx tauri signer generate -w ~/.tauri/hermes.key`,
+          # then set these two as repo secrets (Settings → Secrets and
+          # variables → Actions) and put the printed public key into
+          # tauri.conf.json's plugins.updater.pubkey.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Hermes ${{ github.ref_name }}"
+          releaseBody: "Ver el historial de cambios para más detalles."
+          releaseDraft: true
+          prerelease: false

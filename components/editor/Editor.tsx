@@ -15,6 +15,7 @@ import {
   markdownBlockToHtml,
   meetingMarkdownToHtml,
   replaceRangeWithText,
+  scrollSelectionIntoView,
 } from "@/lib/tiptap/helpers";
 import { ALL_SLASH_COMMANDS } from "@/lib/ai/actions";
 import type {
@@ -42,6 +43,17 @@ interface EditorProps {
 
 export interface EditorHandle {
   generateMeetingSummary: (params: MeetingGenerationParams) => void;
+  /**
+   * Captures the current cursor/selection end position, in Tiptap document
+   * coordinates. Call this synchronously, right when an async upload
+   * starts — the equivalent of reading `textarea.selectionStart` before a
+   * plain-textarea-based upload flow kicks off — so content can later be
+   * inserted exactly where the cursor was, not wherever it happens to be
+   * once the async work resolves.
+   */
+  getCursorPosition: () => number;
+  /** Inserts HTML at a specific document position (from `getCursorPosition`) and refocuses the editor without disturbing the rest of the document. */
+  insertContentAtPosition: (pos: number, html: string) => void;
 }
 
 interface PendingRequest {
@@ -506,7 +518,30 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }, MEETING_RENDER_THROTTLE_MS);
   }, [meetingCompletion, isMeetingLoading, editor, runProgrammaticEdit]);
 
-  useImperativeHandle(ref, () => ({ generateMeetingSummary }), [generateMeetingSummary]);
+  const getCursorPosition = useCallback((): number => {
+    if (!editor) return 0;
+    return editor.state.selection.to;
+  }, [editor]);
+
+  const insertContentAtPosition = useCallback(
+    (pos: number, html: string) => {
+      if (!editor) return;
+      editor.view.dom.focus({ preventScroll: true });
+      runProgrammaticEdit(() => {
+        const safePos = Math.min(pos, editor.state.doc.content.size);
+        editor.chain().insertContentAt(safePos, html).run();
+      });
+      scrollSelectionIntoView(editor);
+      onPersistContent(editor.getHTML());
+    },
+    [editor, onPersistContent, runProgrammaticEdit]
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({ generateMeetingSummary, getCursorPosition, insertContentAtPosition }),
+    [generateMeetingSummary, getCursorPosition, insertContentAtPosition]
+  );
 
   const aiState: AIStreamState = requestMeta
     ? {

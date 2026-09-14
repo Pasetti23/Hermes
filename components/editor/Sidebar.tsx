@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
+  Download,
   File,
   FilePlus,
   Folder,
@@ -34,6 +35,7 @@ interface SidebarProps {
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
   onMove: (id: string, parentId: string | null) => void;
+  onExportPdf: (id: string) => void;
 }
 
 export default function Sidebar({
@@ -45,6 +47,7 @@ export default function Sidebar({
   onRename,
   onDelete,
   onMove,
+  onExportPdf,
 }: SidebarProps): JSX.Element {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -194,6 +197,12 @@ export default function Sidebar({
                   <Pencil className="mr-1.5 h-3.5 w-3.5" />
                   Renombrar
                 </DropdownMenuItem>
+                {!isFolder && (
+                  <DropdownMenuItem onSelect={() => onExportPdf(doc.id)}>
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                    Descargar como PDF
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Mover a</DropdownMenuLabel>
                 <DropdownMenuItem onSelect={() => onMove(doc.id, null)}>Raíz (sin carpeta)</DropdownMenuItem>
@@ -220,7 +229,7 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-ink-800/80 bg-canvas-inset">
+    <aside className="no-print flex h-full w-64 shrink-0 flex-col border-r border-ink-800/80 bg-canvas-inset">
       <div className="flex items-center justify-between px-3 py-3">
         <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">Páginas</span>
         <div className="flex items-center gap-1">

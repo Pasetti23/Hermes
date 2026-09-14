@@ -38,7 +38,7 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 struct ServerProcess(Mutex<Option<Child>>);
 
-const APP_TITLE: &str = "𝓗𝓔𝓡𝓜𝓔𝓢";
+const APP_TITLE: &str = "Hermes";
 const DEV_URL: &str = "http://localhost:3000";
 const SERVER_PORT: u16 = 3000;
 const SERVER_HOST: &str = "127.0.0.1";
@@ -57,8 +57,90 @@ fn standalone_server_path(resource_dir: &Path) -> PathBuf {
     resource_dir.join("standalone").join("server.js")
 }
 
+/// Path to the small, persistent, user-editable `.env`-style file that
+/// holds runtime secrets (API keys) for the *packaged* app. This is the
+/// actual fix for "the API key never reaches production": `.env.local` is
+/// a dev-time convention Next's own dev/build tooling reads — a bundled
+/// `node server.js` child process spawned by Rust has no way to see it at
+/// all, and there's no reasonable expectation that an end user's machine
+/// happens to already have `GOOGLE_GENERATIVE_AI_API_KEY` set as a system
+/// environment variable. `app_config_dir()` is the OS-appropriate place for
+/// this (`%APPDATA%\<identifier>` on Windows, `~/Library/Application
+/// Support/<identifier>` on macOS, `~/.config/<identifier>` on Linux) —
+/// survives app updates/reinstalls, and is a normal place for a desktop
+/// app to keep user-specific configuration.
+fn app_env_file_path(app: &tauri::AppHandle) -> Option<PathBuf> {
+    app.path().app_config_dir().ok().map(|dir| dir.join(".env"))
+}
+
+/// Reads `KEY=VALUE` pairs (one per line, `#`-prefixed lines and blank
+/// lines ignored, optional matching quotes around the value stripped) from
+/// the config file above. On first run, when the file doesn't exist yet,
+/// creates the config directory and writes a commented template instead of
+/// silently doing nothing — so there's an obvious, discoverable place for
+/// whoever installs this app to put their key, without needing to know
+/// Tauri internals.
+fn load_extra_env_vars(app: &tauri::AppHandle) -> Vec<(String, String)> {
+    let Some(path) = app_env_file_path(app) else {
+        log_line("Could not resolve app_config_dir(); no extra env vars loaded.");
+        return Vec::new();
+    };
+
+    if !path.exists() {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let template = "\
+# Hermes — configuracion en tiempo de ejecucion.
+# Descomenta y completa la clave del proveedor que vayas a usar, guarda
+# este archivo y volve a abrir la app.
+#
+# AI_PROVIDER=google
+# GOOGLE_GENERATIVE_AI_API_KEY=tu-clave-aca
+#
+# AI_PROVIDER=openai
+# OPENAI_API_KEY=tu-clave-aca
+";
+        if std::fs::write(&path, template).is_ok() {
+            log_line(&format!("No runtime config found; created a template at {path:?}"));
+        }
+        return Vec::new();
+    }
+
+    let Ok(contents) = std::fs::read_to_string(&path) else {
+        log_line(&format!("Found {path:?} but couldn't read it."));
+        return Vec::new();
+    };
+
+    contents
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                return None;
+            }
+            let (key, raw_value) = trimmed.split_once('=')?;
+            let key = key.trim();
+            if key.is_empty() {
+                return None;
+            }
+            let mut value = raw_value.trim();
+            let is_quoted = value.len() >= 2
+                && ((value.starts_with('"') && value.ends_with('"'))
+                    || (value.starts_with('\'') && value.ends_with('\'')));
+            if is_quoted {
+                value = &value[1..value.len() - 1];
+            }
+            Some((key.to_string(), value.to_string()))
+        })
+        .collect()
+}
+
 fn log_dir() -> PathBuf {
-    std::env::temp_dir()
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(Path::to_path_buf))
+        .unwrap_or_else(std::env::temp_dir)
 }
 
 /// Every release-mode failure path funnels through here instead of
@@ -69,14 +151,14 @@ fn log_dir() -> PathBuf {
 fn log_line(message: &str) {
     eprintln!("[canvas] {message}");
 
-    let log_path = log_dir().join("canvas-server.log");
+    let log_path = log_dir().join("hermes-server.log");
     if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&log_path) {
         let _ = writeln!(file, "[{:?}] {message}", std::time::SystemTime::now());
     }
 }
 
 /// Opens (create-or-append) the file Node's own stdout/stderr get
-/// redirected into, kept separate from `canvas-server.log` (which is only
+/// redirected into, kept separate from `hermes-server.log` (which is only
 /// ever written to by this Rust process) so the two don't interleave and
 /// Node's raw output — which is exactly what would explain a silent crash
 /// like "starts, dies around 100ms" — is easy to find on its own.
@@ -84,7 +166,7 @@ fn open_node_log_file() -> std::io::Result<File> {
     std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(log_dir().join("canvas-node.log"))
+        .open(log_dir().join("hermes-node.log"))
 }
 
 enum ReadyOutcome {
@@ -102,7 +184,7 @@ enum ReadyOutcome {
 /// respond in time" message. Checking `child.try_wait()` on every poll
 /// means a crash gets detected on the very next tick (≤150ms later) and
 /// reported with the actual exit status, pointing straight at
-/// `canvas-node.log` for the real reason instead of a vague timeout.
+/// `hermes-node.log` for the real reason instead of a vague timeout.
 fn wait_for_server_ready(child: &mut Child) -> ReadyOutcome {
     let deadline = Instant::now() + READY_TIMEOUT;
     while Instant::now() < deadline {
@@ -121,7 +203,11 @@ fn wait_for_server_ready(child: &mut Child) -> ReadyOutcome {
     ReadyOutcome::TimedOut
 }
 
-/// Spawns `node <server_entry>` with the port/host it should bind to.
+/// Spawns `node <server_entry>` with the port/host it should bind to, plus
+/// whatever was loaded from the user's config file (see
+/// `load_extra_env_vars` — this is what actually gets the Gemini/OpenAI API
+/// key into a *packaged* build's server process; `.env.local` alone never
+/// reaches it).
 ///
 /// Windows-specific fixes baked in here (this is the actual fix for this
 /// report — flashing black console + Node dying near-instantly):
@@ -138,7 +224,7 @@ fn wait_for_server_ready(child: &mut Child) -> ReadyOutcome {
 ///   valid console/stdio handles to inherit in the first place — so Node
 ///   starts up, immediately tries to write its normal startup log lines to
 ///   an inherited stdout handle that isn't backed by anything real, and
-///   dies. Explicitly redirecting both streams to `canvas-node.log`
+///   dies. Explicitly redirecting both streams to `hermes-node.log`
 ///   sidesteps handle inheritance entirely and, as a bonus, actually
 ///   captures Node's own output for debugging instead of throwing it away.
 /// - **`current_dir(...)`**: set explicitly to the server's own folder,
@@ -151,7 +237,7 @@ fn wait_for_server_ready(child: &mut Child) -> ReadyOutcome {
 ///   falling back to routing through `cmd.exe` (which does understand
 ///   those shims) if that fails — both paths get the same
 ///   no-window/redirected-stdio treatment.
-fn spawn_node_server(server_entry: &Path) -> std::io::Result<Child> {
+fn spawn_node_server(server_entry: &Path, extra_env: &[(String, String)]) -> std::io::Result<Child> {
     let working_dir = server_entry.parent().unwrap_or_else(|| Path::new("."));
 
     #[cfg(target_os = "windows")]
@@ -160,11 +246,11 @@ fn spawn_node_server(server_entry: &Path) -> std::io::Result<Child> {
         let stderr_file = stdout_file.try_clone()?;
 
         let direct = Command::new("node.exe")
-            .arg("server.js")
+            .arg(server_entry)
             .current_dir(working_dir)
             .env("PORT", SERVER_PORT.to_string())
             .env("HOSTNAME", SERVER_HOST)
-            .env("NODE_ENV", "production")
+            .envs(extra_env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
             .creation_flags(CREATE_NO_WINDOW)
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout_file))
@@ -182,11 +268,12 @@ fn spawn_node_server(server_entry: &Path) -> std::io::Result<Child> {
                 let stderr_file = stdout_file.try_clone()?;
 
                 Command::new("cmd")
-                    .args(["/C", "node", "server.js"])
+                    .args(["/C", "node"])
+                    .arg(server_entry)
                     .current_dir(working_dir)
                     .env("PORT", SERVER_PORT.to_string())
                     .env("HOSTNAME", SERVER_HOST)
-                    .env("NODE_ENV", "production")
+                    .envs(extra_env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
                     .creation_flags(CREATE_NO_WINDOW)
                     .stdin(Stdio::null())
                     .stdout(Stdio::from(stdout_file))
@@ -202,11 +289,11 @@ fn spawn_node_server(server_entry: &Path) -> std::io::Result<Child> {
         let stderr_file = stdout_file.try_clone()?;
 
         Command::new("node")
-            .arg("server.js")
+            .arg(server_entry)
             .current_dir(working_dir)
             .env("PORT", SERVER_PORT.to_string())
             .env("HOSTNAME", SERVER_HOST)
-            .env("NODE_ENV", "production")
+            .envs(extra_env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout_file))
             .stderr(Stdio::from(stderr_file))
@@ -252,6 +339,8 @@ fn open_main_window(app: &tauri::AppHandle, url_str: &str) -> tauri::Result<()> 
 fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(ServerProcess(Mutex::new(None)))
         .setup(|app| {
             let handle = app.handle().clone();
@@ -288,7 +377,28 @@ fn main() {
                     return Ok(());
                 }
 
-                let mut child = match spawn_node_server(&server_entry) {
+                let mut extra_env = load_extra_env_vars(&handle);
+
+                // The Tauri equivalent of Electron's app.getPath('userData')
+                // — an OS-appropriate, always-writable directory that
+                // survives app updates/reinstalls (%APPDATA%\<identifier>
+                // on Windows, ~/Library/Application Support/<identifier> on
+                // macOS, ~/.config/<identifier> on Linux). Passed through so
+                // the Next.js server knows where it's actually safe to
+                // write uploaded files — writing into the app's own install
+                // directory (e.g. Program Files) fails without admin rights.
+                match app.path().app_data_dir() {
+                    Ok(dir) => {
+                        if let Err(e) = std::fs::create_dir_all(&dir) {
+                            log_line(&format!("Could not create app_data_dir {dir:?}: {e}"));
+                        } else if let Some(dir_str) = dir.to_str() {
+                            extra_env.push(("HERMES_USER_DATA_DIR".to_string(), dir_str.to_string()));
+                        }
+                    }
+                    Err(e) => log_line(&format!("Failed to resolve app_data_dir(): {e}")),
+                }
+
+                let mut child = match spawn_node_server(&server_entry, &extra_env) {
                     Ok(child) => child,
                     Err(e) => {
                         show_fatal_error(
@@ -314,7 +424,7 @@ fn main() {
                             &handle,
                             &format!(
                                 "El servidor de Node.js se cerró inesperadamente ({status}) antes de responder. \
-                                 Revisá canvas-node.log junto al ejecutable para ver la salida real de Node."
+                                 Revisá hermes-node.log junto al ejecutable para ver la salida real de Node."
                             ),
                         );
                     }
@@ -336,7 +446,7 @@ fn main() {
             }
         })
         .build(tauri::generate_context!())
-        .expect("error while building the Canvas desktop shell");
+        .expect("error while building the Hermes desktop shell");
 
     app.run(|app_handle, event| {
         // Belt-and-suspenders alongside the `Destroyed` handler above:

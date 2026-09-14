@@ -4,6 +4,7 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import CharacterCount from "@tiptap/extension-character-count";
+import { ResizableImage } from "@/lib/tiptap/ResizableImage";
 import { createLowlight, common } from "lowlight";
 import type { Extensions } from "@tiptap/react";
 
@@ -36,5 +37,9 @@ export function buildEditorExtensions(): Extensions {
       HTMLAttributes: { class: "ai-code-block" },
     }),
     CharacterCount.configure({}),
+    ResizableImage.configure({
+      HTMLAttributes: { class: "ai-doc-image" },
+      allowBase64: false,
+    }),
   ];
 }

@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Importación correcta de la tipografía al principio del CSS o antes de tus selectores */
-@import url('https://cdnfonts.com');
-
 :root {
   color-scheme: dark;
 }
@@ -33,9 +30,7 @@ body {
   color: theme("colors.ink.100");
 }
 
-/* Cambiamos la tipografía básica de la app por Roman SD */
 body {
-  font-family: 'Roman SD', serif !important;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
@@ -71,14 +66,6 @@ body {
   height: 0;
   color: theme("colors.ink.500");
   pointer-events: none;
-}
-
-/* Aplicamos Roman SD también a tus encabezados principales */
-.ai-editor-shell .ProseMirror h1,
-.ai-editor-shell .ProseMirror h2,
-.ai-editor-shell .ProseMirror h3 {
-  font-family: 'Roman SD', serif;
-  text-transform: uppercase;
 }
 
 .ai-editor-shell .ProseMirror h1 {
@@ -212,6 +199,20 @@ body {
   font-weight: 650;
 }
 
+.ai-editor-shell .ProseMirror img.ai-doc-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin: 0.75rem 0;
+  border: 1px solid theme("colors.ink.800");
+}
+
+.ai-editor-shell .ProseMirror img.ai-doc-image.ProseMirror-selectednode {
+  outline: 2px solid theme("colors.ai.DEFAULT");
+  outline-offset: 2px;
+}
+
 .ai-region-active {
   background: theme("colors.ai.glow");
   border-radius: 3px;
@@ -229,10 +230,82 @@ body {
   animation: shimmer 1.6s linear infinite;
 }
 
-/* Clase auxiliar por si la necesitás en componentes individuales */
-.marca-hermes {
-  font-family: 'Roman SD', serif;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.25em;
+/* ---- Print / "Export as PDF" ----
+   Triggered via window.print() (see handleExportPdf in app/page.tsx) — the
+   browser's/WebView's native print-to-PDF renders real, selectable text at
+   full quality, unlike a canvas-rasterized approach (e.g. html2canvas). */
+@media print {
+  /* App chrome and every floating/portal-rendered overlay never belongs on
+     paper. [data-tippy-root] covers the bubble menu, which tippy.js renders
+     via a portal outside our component tree entirely. */
+  .no-print,
+  [data-tippy-root] {
+    display: none !important;
+  }
+
+  /* The editor layout is deliberately viewport-locked (h-screen + internal
+     scroll areas) on screen. For print, every ancestor of the document
+     content needs `overflow: visible` and `height: auto`, or the browser
+     only prints whatever fit in one screen-height "viewport" and silently
+     drops the rest of the document. */
+  html,
+  body,
+  .print-root,
+  .print-row,
+  .ai-editor-shell {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .ai-editor-shell {
+    width: 100% !important;
+  }
+
+  .ai-editor-shell > div {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  /* Force light, ink-on-paper colors regardless of the app's dark theme —
+     printing white text on a transparent/dark background would be
+     unreadable. */
+  body {
+    background: #ffffff !important;
+  }
+
+  .ai-editor-shell .ProseMirror,
+  .ai-editor-shell .ProseMirror p,
+  .ai-editor-shell .ProseMirror li {
+    color: #111111 !important;
+  }
+
+  .ai-editor-shell .ProseMirror h1,
+  .ai-editor-shell .ProseMirror h2,
+  .ai-editor-shell .ProseMirror h3,
+  .ai-editor-shell .ProseMirror strong {
+    color: #000000 !important;
+  }
+
+  .ai-editor-shell .ProseMirror blockquote {
+    color: #333333 !important;
+    border-left-color: #999999 !important;
+  }
+
+  .ai-editor-shell .ProseMirror pre {
+    background: #f4f4f5 !important;
+    border-color: #d4d4d8 !important;
+  }
+
+  .ai-editor-shell .ProseMirror pre code {
+    color: #111111 !important;
+  }
+
+  .ai-editor-shell .ProseMirror hr {
+    border-top-color: #cccccc !important;
+  }
+
+  .ai-editor-shell .ProseMirror img.ai-doc-image {
+    border-color: #cccccc !important;
+  }
 }
