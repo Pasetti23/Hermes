@@ -74,9 +74,16 @@ export default function VersionStatus(): JSX.Element | null {
           setUpdateState("idle");
         }
       } catch (err) {
+        // A failed background check (no releases published yet, no network,
+        // a 404 on the latest.json endpoint, ...) is the normal case for
+        // most of this app's lifetime, not something to alarm the user
+        // about — stay silent and just show nothing extra, exactly like
+        // "no update available". Only errors from an action the user
+        // actually triggered (downloading, installing, relaunching) are
+        // worth surfacing.
         if (!cancelled) {
-          setUpdateState("error");
-          setErrorMessage(err instanceof Error ? err.message : "No se pudo comprobar si hay actualizaciones.");
+          console.error("[VersionStatus] update check failed:", err);
+          setUpdateState("idle");
         }
       }
     })();

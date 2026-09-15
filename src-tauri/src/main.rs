@@ -54,8 +54,19 @@ const READY_POLL_INTERVAL: Duration = Duration::from_millis(150);
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 fn standalone_server_path(resource_dir: &Path) -> PathBuf {
+    // Intentamos obtener la ruta de la carpeta donde está corriendo este exe
+    if let Ok(current_exe) = std::env::current_exe() {
+        if let Some(exe_dir) = current_exe.parent() {
+            let local_standalone = exe_dir.join("standalone").join("server.js");
+            if local_standalone.exists() {
+                return local_standalone;
+            }
+        }
+    }
+    // Si no lo encuentra al lado del exe, usa la ruta de recursos por defecto
     resource_dir.join("standalone").join("server.js")
 }
+
 
 /// Path to the small, persistent, user-editable `.env`-style file that
 /// holds runtime secrets (API keys) for the *packaged* app. This is the
@@ -245,16 +256,17 @@ fn spawn_node_server(server_entry: &Path, extra_env: &[(String, String)]) -> std
         let stdout_file = open_node_log_file()?;
         let stderr_file = stdout_file.try_clone()?;
 
-        let direct = Command::new("node.exe")
+        // 1. Intentamos ejecutar node.exe directo
+        let direct = std::process::Command::new("node.exe")
             .arg(server_entry)
             .current_dir(working_dir)
             .env("PORT", SERVER_PORT.to_string())
             .env("HOSTNAME", SERVER_HOST)
             .envs(extra_env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
             .creation_flags(CREATE_NO_WINDOW)
-            .stdin(Stdio::null())
-            .stdout(Stdio::from(stdout_file))
-            .stderr(Stdio::from(stderr_file))
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::from(stdout_file))
+            .stderr(std::process::Stdio::from(stderr_file))
             .spawn();
 
         match direct {
@@ -267,17 +279,20 @@ fn spawn_node_server(server_entry: &Path, extra_env: &[(String, String)]) -> std
                 let stdout_file = open_node_log_file()?;
                 let stderr_file = stdout_file.try_clone()?;
 
-                Command::new("cmd")
-                    .args(["/C", "node"])
-                    .arg(server_entry)
+                // Agrupamos el comando y la ruta entre comillas para cmd
+                let cmd_string = format!("node \"{}\"", server_entry.to_string_lossy());
+
+                // 2. Fallback seguro usando cmd.exe sin romper la ruta a C:
+                std::process::Command::new("cmd")
+                    .args(["/C", &cmd_string])
                     .current_dir(working_dir)
                     .env("PORT", SERVER_PORT.to_string())
                     .env("HOSTNAME", SERVER_HOST)
                     .envs(extra_env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
                     .creation_flags(CREATE_NO_WINDOW)
-                    .stdin(Stdio::null())
-                    .stdout(Stdio::from(stdout_file))
-                    .stderr(Stdio::from(stderr_file))
+                    .stdin(std::process::Stdio::null())
+                    .stdout(std::process::Stdio::from(stdout_file))
+                    .stderr(std::process::Stdio::from(stderr_file))
                     .spawn()
             }
         }
@@ -288,18 +303,19 @@ fn spawn_node_server(server_entry: &Path, extra_env: &[(String, String)]) -> std
         let stdout_file = open_node_log_file()?;
         let stderr_file = stdout_file.try_clone()?;
 
-        Command::new("node")
+        std::process::Command::new("node")
             .arg(server_entry)
             .current_dir(working_dir)
             .env("PORT", SERVER_PORT.to_string())
             .env("HOSTNAME", SERVER_HOST)
             .envs(extra_env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
-            .stdin(Stdio::null())
-            .stdout(Stdio::from(stdout_file))
-            .stderr(Stdio::from(stderr_file))
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::from(stdout_file))
+            .stderr(std::process::Stdio::from(stderr_file))
             .spawn()
     }
 }
+
 
 /// Kills the tracked Node child process, if any. Takes the already-resolved
 /// `ServerProcess` state rather than an `AppHandle`, and binds the lock
